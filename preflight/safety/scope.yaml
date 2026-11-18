@@ -1,0 +1,18 @@
+# Approved scope. The gateway refuses any request outside it and logs the refusal.
+# A SHA-256 of this file is taken at start-up; any change mid-run trips the kill switch.
+# Default: the local synthetic target only. Never add a real host here.
+allowed_hosts:
+  - 127.0.0.1
+  - localhost
+allowed_ports:
+  - 8000
+allowed_schemes:
+  - http
+allowed_methods:
+  - GET
+  - HEAD
+  - OPTIONS
+  - POST
+  - PUT
+  - PATCH
+  - DELETE

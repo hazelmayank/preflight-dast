@@ -1,0 +1,19 @@
+# Rate limiting, health backoff and request caps. Integrity-checked like scope.yaml.
+rate_limit:
+  requests_per_second: 5
+  burst: 10
+  max_wait_seconds: 30      # longer waits are refused, not queued
+health:
+  window: 20                # last N responses considered
+  min_samples: 8
+  p90_latency_ms: 1500
+  error_rate: 0.5           # only 5xx and transport errors count; 4xx are expected in security tests
+  backoff_initial_seconds: 1
+  backoff_max_seconds: 30
+  backoff_multiplier: 2
+  recover_after_healthy: 5
+request:
+  timeout_seconds: 10
+  max_body_bytes: 65536
+  max_response_bytes: 1048576
+  max_concurrency: 2
