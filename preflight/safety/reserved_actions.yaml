@@ -1,0 +1,21 @@
+# Actions that need human sign-off before the gateway will send them.
+# Matched on HTTP method and URL path (regex, searched). Integrity-checked.
+approval_ttl_seconds: 900
+# Set true to hold every POST/PUT/PATCH/DELETE, not just the reserved ones.
+state_changing_requires_approval: false
+reserved:
+  - name: payment
+    methods: [POST, PUT, PATCH]
+    path_regex: '/(pay|payments?|charge)(/|$)'
+  - name: cancellation
+    methods: [POST, PUT, PATCH, DELETE]
+    path_regex: '/(cancel|cancellations?)(/|$)'
+  - name: refund
+    methods: [POST, PUT, PATCH, DELETE]
+    path_regex: '/refunds?(/|$)'
+  - name: role_change
+    methods: [POST, PUT, PATCH, DELETE]
+    path_regex: '/(users|members|roles?|permissions?)(/|$)'
+  - name: supplier_callback
+    methods: [POST, PUT, PATCH]
+    path_regex: '/webhooks?(/|$)'
