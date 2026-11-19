@@ -1,22 +1,38 @@
 # Architecture
 
-See the flowchart in the README. Phase 0 delivers the safety layer and the synthetic target.
+See the diagrams in the README. Components and where they live:
 
 | Component | Module | Status |
 |---|---|---|
-| C1 Target app | `target/` | done: 2 tenants, 3 roles, search > hold > book > pay > cancel > refund, invoices, PII, supplier webhook, vulnerable/fixed deploys |
-| C2 Seed harness | `seeds/` (defender-only) | done: 20 seeds, 9 classes |
-| C8 Safety gateway | `preflight/safety/` | done |
-| C3 Change watcher | `preflight/orchestrator/` | Phase 1 |
-| C4-C5 Recon, inventory | `preflight/recon/`, `inventory/` | Phase 2 |
-| C6-C7, C9 Rules, planner, verifier | `discovery/`, `planning/`, `execution/` | Phase 3 |
-| C10-C13 Triage, report, UI, benchmark | `triage/`, `reporting/`, `ui/`, `bench/` | Phase 4 |
+| Target app (2 tenants, 3 roles, vulnerable/fixed deploys) | `target/` | done |
+| Ground truth (20 issues, 9 classes) | `seeds/` (defender-only) | done |
+| Safety gateway, approvals, kill switch, audit | `preflight/safety/` | done |
+| Change watcher | `preflight/orchestrator/watcher.py` | done: version + bundle hash |
+| Recon + inventory + OpenAPI | `preflight/recon/`, `preflight/inventory/` | done: bundle (regex), HAR, logs |
+| Invariant proposal + validation + rulebook | `preflight/discovery/`, `preflight/llm/` | done: recorded replay |
+| Planner (one plan per confirmed invariant) | `preflight/planning/` | done |
+| Flow replay, 8 property checks, verifier | `preflight/execution/` | done |
+| Triage, tickets, retest | `preflight/triage/`, `preflight/reporting/` | done |
+| Orchestrator state machine | `preflight/orchestrator/machine.py` | done |
+| Control room | `preflight/ui/` | done (minimal) |
+| Demo runner, benchmark scorer | `demo/`, `bench/` | done |
+
+## Data flow
+
+`ApiMap` (recon) -> LLM proposes `InvariantCandidate`s -> validated against `CATALOGUE` and the map ->
+`Rulebook` (human confirms) -> `CheckPlan`s -> `Flow` replays the recorded journey to the needed state ->
+a check runs the normal flow + one variation via `ApiClient` -> `verify()` needs 2 violations and a
+passing control -> `triage()` -> `TicketStore` -> after the next deploy `retest_ticket()`.
 
 ## Target app
 
 `POST /_deploy` (header `X-Deploy-Token`) switches the build: `{"version", "mode": "vulnerable" |
-"fixed", "patched": ["S01"], "reset": false}`. `GET /_version` returns only the version, never the
-mode. `make data` writes 30/90-day access logs and a HAR to `target/data/` (zombie `/api/v0`, shadow
-`/internal/debug/config` and webhook traffic included).
+"fixed", "patched": ["S01"], "reset": false}`. `GET /_version` returns only the version, never the mode.
 
-Owners: _(fill in per module)_
+## Config over code
+
+Scope, limits and reserved actions (`preflight/safety/*.yaml`), severity and owners
+(`preflight/triage/*.yaml`), sensitive-field rules (`preflight/execution/sensitive_fields.yaml`),
+fixes (`preflight/reporting/fixes.yaml`), LLM routing (`preflight/llm/llm.yaml`).
+
+Owners: _(fill in per module before the finals: each member must be able to explain theirs)_

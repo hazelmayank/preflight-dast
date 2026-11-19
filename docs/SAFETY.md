@@ -27,7 +27,7 @@ Everything the agent sends passes `Gateway.send` in `preflight/safety/gateway.py
 |---|---|
 | `test_egress_guard.py` | any file in `preflight/` except `gateway.py` imports `requests`, `httpx`, `urllib`, `urllib3`, `aiohttp`, `socket`, `http.client`, `subprocess`, etc., calls `os.system`, or uses a dynamic import |
 | `test_seed_isolation.py` | `preflight/` imports `seeds`, `target` or `bench`, or names a `seeds/` path |
-| `test_no_auto_approve.py` | agent code calls `approve` or `human_release` (only `approval.py`, `killswitch.py`, and `ui/` may) |
+| `test_no_auto_approve.py` | agent code calls `approve`, `human_release`, `confirm_invariants`, `confirm_low_confidence` or `reject_invariant` (only `approval.py`, `killswitch.py`, `rulebook.py` and `ui/` may) |
 
 Consequence of the strict egress rule: URL parsing helpers (`urllib.parse`) are also gateway-only.
 Other modules that need URL parts should get them from the gateway or use plain string handling.
@@ -48,3 +48,15 @@ Approver names that look like agents (`agent*`, `bot*`, `auto*`, `preflight*`, .
   process separation, not cryptography.
 - The scope check trusts the hostname string; a DNS-rebinding `localhost` is out of scope for a
   localhost-only target.
+
+## LLM channel
+
+LLM calls use `channel="llm"` on the same gateway: https POST to a host in `llm_hosts` only. That list
+is **empty by default**, so the demo (recorded replay) never touches it. It shares the kill switch,
+rate limit and audit chain; prompt bodies are logged as short redacted previews. Prompt version,
+model and provenance are logged for every LLM action (`agent_action` events).
+
+## Approvals
+
+An approval is bound to the exact request fingerprint, single use, and expires. A consumed approval
+is never re-offered for an identical request (this was a real bug found by the double-refund check).
