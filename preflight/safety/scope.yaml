@@ -16,3 +16,9 @@ allowed_methods:
   - PUT
   - PATCH
   - DELETE
+# LLM channel (separate from the target scope). Empty = LLM calls are refused.
+# To use the Anthropic provider, add api.anthropic.com here BEFORE starting a run.
+# Prompts then contain the inferred API map of the synthetic target.
+llm_hosts: []
+llm_ports:
+  - 443

@@ -81,6 +81,8 @@ class Scope:
     ports: frozenset[int]
     schemes: frozenset[str]
     methods: frozenset[str]
+    llm_hosts: frozenset[str] = frozenset()  # separate, default-empty allowlist for LLM calls
+    llm_ports: frozenset[int] = frozenset({443})
 
     @classmethod
     def from_file(cls, path: Path | str) -> Scope:
@@ -90,7 +92,27 @@ class Scope:
             frozenset(int(p) for p in raw.get("allowed_ports", [])),
             frozenset(str(s).lower() for s in raw.get("allowed_schemes", ["http"])),
             frozenset(str(m).upper() for m in raw.get("allowed_methods", ["GET"])),
+            frozenset(str(h).lower() for h in raw.get("llm_hosts", [])),
+            frozenset(int(p) for p in raw.get("llm_ports", [443])),
         )
+
+    def check_llm(self, method: str, url: str) -> SplitResult:
+        """LLM channel: https POST to an explicitly allowlisted host only."""
+        if _BAD_URL_CHARS.search(url):
+            raise ScopeViolation("illegal characters in URL")
+        try:
+            parts = urlsplit(url)
+            port = parts.port
+        except ValueError:
+            raise ScopeViolation("malformed URL") from None
+        host = (parts.hostname or "").rstrip(".").lower()
+        if parts.scheme.lower() != "https" or parts.username is not None:
+            raise ScopeViolation("LLM channel is https only, no URL credentials")
+        if host not in self.llm_hosts:
+            raise ScopeViolation(f"LLM host {host!r} is not allowlisted (llm_hosts is empty by default)")
+        if (port or 443) not in self.llm_ports or method != "POST":
+            raise ScopeViolation("LLM channel allows POST on allowlisted ports only")
+        return parts
 
     def check(self, method: str, url: str) -> SplitResult:
         """Return the parsed URL or raise ScopeViolation. Never resolves or connects."""
@@ -304,21 +326,28 @@ class Gateway:
         actor: str = "agent",
         purpose: str = "",
         approval_id: str | None = None,
+        channel: str = "target",
     ) -> GatewayResponse:
         method = method.upper()
         rid = f"req-{next(self._ids):06d}"
         ctx = {"id": rid, "actor": actor, "purpose": purpose, "method": method,
-               "url": redact_url(url)}
+               "url": redact_url(url), "channel": channel}
 
         self._guard_kill(ctx)
         self._guard_integrity(ctx)
         try:
-            parts = self.scope.check(method, url)
+            if channel == "llm":
+                parts = self.scope.check_llm(method, url)
+            elif channel == "target":
+                parts = self.scope.check(method, url)
+            else:
+                raise ScopeViolation(f"unknown channel {channel!r}")
             body, hdrs = self._prepare(json_body, content, headers)
         except GatewayError as exc:
             self._refuse(ctx, exc)
             raise
-        self._guard_approval(method, parts, url, params, body, approval_id, ctx)
+        if channel == "target":
+            self._guard_approval(method, parts, url, params, body, approval_id, ctx)
 
         with self._slots:
             self._pace(ctx)
@@ -394,7 +423,8 @@ class Gateway:
         self.audit.append(
             "request", headers=redact_headers(hdrs),
             params=json.loads(redact_text(json.dumps(dict(params or {})))),
-            body=redact_text(body.decode("utf-8", errors="replace")) if body else "", **ctx,
+            body=redact_text(body.decode("utf-8", errors="replace"),
+                             300 if ctx["channel"] == "llm" else 1000) if body else "", **ctx,
         )
         self.stats["sent"] += 1
         start = self._clock()
