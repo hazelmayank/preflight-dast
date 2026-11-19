@@ -5,8 +5,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 PKG = ROOT / "preflight"
-HUMAN_ONLY = {"approve", "human_release"}
-ALLOWED = {PKG / "safety" / "approval.py", PKG / "safety" / "killswitch.py"}
+HUMAN_ONLY = {"approve", "human_release", "confirm_invariants", "confirm_low_confidence",
+              "reject_invariant"}
+ALLOWED = {PKG / "safety" / "approval.py", PKG / "safety" / "killswitch.py",
+           PKG / "discovery" / "rulebook.py"}
 ALLOWED_DIRS = {PKG / "ui"}  # operator UI: a human clicks the button
 
 
@@ -33,4 +35,6 @@ def test_no_auto_approve_or_release():
 def test_checker_catches_calls():
     assert human_calls("queue.approve('x', 'me')")
     assert human_calls("ks.human_release('me')")
+    assert human_calls("book.confirm_invariants('me')")
+    assert human_calls("book.confirm_low_confidence('INV-08', 'me')")
     assert not human_calls("queue.pending()")
