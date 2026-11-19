@@ -1,0 +1,9 @@
+# Suggested fix per invariant kind (shown in tickets).
+refund_bound: "Validate refund.amount <= booking.amount_paid on the server before recording a refund; reject with 400."
+no_double_refund: "Track refunded_total per booking and reject any refund that would push it above amount_paid; make refunds idempotent."
+price_integrity: "Compute the charge server-side from the stored quote; ignore any client-supplied amount or reject mismatches."
+valid_transitions: "Enforce a booking state machine (held -> booked -> paid -> cancelled -> refunded); reject actions from invalid states with 409."
+tenant_isolation_read: "Authorise every booking read against the session tenant (filter by tenant_id in the query); return 404 for other tenants' ids."
+role_boundary: "Add a server-side role check on admin routes (admin only) and verify the tenant in the path matches the session."
+ownership_modify: "Check that the caller's agency owns the booking before cancel or modify; return 403/404 otherwise."
+no_sensitive_exposure: "Return role-scoped DTOs (strip internal cost/margin/PII for non-entitled roles); remove or protect debug and internal routes."

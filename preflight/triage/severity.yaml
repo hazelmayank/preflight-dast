@@ -1,0 +1,15 @@
+# Business-impact severity. Base level by invariant kind, raised by impact modifiers.
+# The money figures are ASSUMPTIONS for the synthetic app, not TBO data.
+levels: [low, medium, high, critical]
+base:
+  refund_bound: critical        # money leaves the business
+  no_double_refund: critical
+  price_integrity: high
+  valid_transitions: high
+  tenant_isolation_read: high   # cross-tenant data
+  role_boundary: high           # privilege
+  ownership_modify: high
+  no_sensitive_exposure: medium # data exposure
+money_over_inr: 10000           # a per-attempt money impact at or above this raises severity one level
+secret_field_regex: 'secret|jwt|key|token|password|card'   # exposed secrets raise severity one level
+assumed_exploits_per_day: 10    # used only to illustrate daily exposure; labelled as an assumption

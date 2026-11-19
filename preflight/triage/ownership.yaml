@@ -1,0 +1,7 @@
+# First matching rule wins. Path regex -> owning team (fictional contacts for the synthetic app).
+default: {team: platform-engineering, contact: platform@waypoint.test}
+rules:
+  - {path_regex: '/(refunds?|pay|payments?|invoices?)(/|$)', team: payments-team, contact: payments@waypoint.test}
+  - {path_regex: '/admin/|/users', team: identity-and-access, contact: iam@waypoint.test}
+  - {path_regex: '/internal/|/debug', team: platform-sre, contact: sre@waypoint.test}
+  - {path_regex: '/bookings', team: bookings-team, contact: bookings@waypoint.test}
