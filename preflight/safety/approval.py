@@ -29,6 +29,13 @@ _AGENT_LIKE = re.compile(r"^(agent|bot|preflight|system|auto|llm|orchestrator)",
 STATE_CHANGING = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 
 
+def require_human(name: str) -> str:
+    """Raise unless ``name`` looks like a named human (not empty, not agent-like)."""
+    if not name.strip() or _AGENT_LIKE.match(name.strip()):
+        raise PermissionError("this action must come from a named human")
+    return name.strip()
+
+
 @dataclass(frozen=True)
 class ReservedRule:
     name: str
@@ -131,8 +138,7 @@ class ApprovalQueue:
         return self._decide(approval_id, approver, "denied", reason)
 
     def _decide(self, approval_id: str, approver: str, status: str, reason: str) -> dict:
-        if not approver.strip() or _AGENT_LIKE.match(approver.strip()):
-            raise PermissionError("approvals must come from a named human")
+        require_human(approver)
         with self._locked():
             items = self._load()
             rec = items.get(approval_id)
