@@ -10,7 +10,10 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-_ID_SEGMENT = re.compile(r"^(?:[A-Za-z]{1,5}-\d+|[A-Za-z]{1,3}\d+|\d+|[0-9a-f]{12,}|tok_[0-9a-f]+)$")
+# (?!v\d+$): API version segments such as v1 are not ids
+_ID_SEGMENT = re.compile(
+    r"^(?!v\d+$)(?:[A-Za-z]{1,5}-\d+|[A-Za-z]{1,3}\d+|\d+|[0-9a-f]{12,}|tok_[0-9a-f]+)$"
+)
 _PARAM = re.compile(r"\{[^}]+\}")
 
 
