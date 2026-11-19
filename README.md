@@ -2,6 +2,9 @@
 
 **VoyageHack 4.0 · Fraud Prevention & Security: Agentic Real-Time DAST**
 
+[![ci](https://github.com/hazelmayank/preflight-dast/actions/workflows/ci.yml/badge.svg)](https://github.com/hazelmayank/preflight-dast/actions/workflows/ci.yml)
+· Repo: <https://github.com/hazelmayank/preflight-dast>
+
 Preflight is an autonomous security-testing agent for a B2B travel platform. On every deploy it
 detects what changed, maps the API with no spec, and lets an LLM **propose the platform's own
 business rules** from observed traffic. Each rule becomes a deterministic test, sent through one
