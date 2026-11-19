@@ -26,3 +26,5 @@ select = ["E", "F", "I", "B", "UP"]
 
 [tool.ruff.lint.per-file-ignores]
 "target/app.py" = ["B008", "E501"]  # FastAPI Depends() idiom; long one-line HTML
+"demo/*.py" = ["E501"]   # console output
+"bench/*.py" = ["E501"]  # report text

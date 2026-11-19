@@ -1,7 +1,7 @@
 PY ?= python
 TARGET_PORT ?= 8000
 
-.PHONY: install test lint target data demo clean
+.PHONY: install test lint target data demo demo-live bench clean
 
 install:
 	$(PY) -m pip install -r requirements.txt
@@ -18,10 +18,17 @@ target:
 data:
 	$(PY) -m target.gen_data
 
-# STUB (Phase 0): the full deploy -> proof -> ticket -> fix -> auto-close loop lands in Phases 1-4.
-demo: data
-	@echo "make demo is a stub until Phase 4."
-	@echo "Phase 0 check: run 'make test' (egress guard, seed isolation, gateway) and 'make target'."
+# The whole loop, offline, against our own synthetic target (about a minute or two).
+demo:
+	$(PY) -m demo.run_demo
+
+# Same, but keeps the control room up afterwards (Ctrl-C to stop). Add MANUAL=1 to decide in the UI.
+demo-live:
+	$(PY) -m demo.run_demo --keep-alive $(if $(MANUAL),--manual,)
+
+# Re-score the last run against the ground truth and rewrite docs/BENCHMARKS.md.
+bench:
+	$(PY) -m bench.score
 
 clean:
 	rm -rf out .pytest_cache .ruff_cache

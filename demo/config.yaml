@@ -1,0 +1,21 @@
+# Config for `make demo`. Paths are relative to the repo root. All accounts are synthetic.
+target:
+  base_url: http://127.0.0.1:8000
+inputs:
+  har: target/data/journeys.har
+  logs_30d: target/data/access_30d.jsonl
+  logs_90d: target/data/access_90d.jsonl
+out_dir: out
+recordings_dir: demo/recordings
+approval_wait_seconds: 120
+confirm_wait_seconds: 120
+poll_seconds: 1
+monitor_timeout_seconds: 120
+post_fix_sweep: true
+accounts:
+  - {name: acme_admin, tenant: acme, role: admin,     email: admin@acme.test, password: "Test-Pass-1!"}
+  - {name: acme_agent, tenant: acme, role: agent,     email: agent@acme.test, password: "Test-Pass-1!"}
+  - {name: acme_sub,   tenant: acme, role: sub_agent, email: sub@acme.test,   password: "Test-Pass-1!"}
+  - {name: beta_admin, tenant: beta, role: admin,     email: admin@beta.test, password: "Test-Pass-1!"}
+  - {name: beta_agent, tenant: beta, role: agent,     email: agent@beta.test, password: "Test-Pass-1!"}
+  - {name: beta_sub,   tenant: beta, role: sub_agent, email: sub@beta.test,   password: "Test-Pass-1!"}
