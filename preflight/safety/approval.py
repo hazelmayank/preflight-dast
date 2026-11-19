@@ -98,7 +98,7 @@ class ApprovalQueue:
         with self._locked():
             items = self._load()
             for rec in items.values():
-                if rec["fingerprint"] == fp and self._live(rec):
+                if rec["fingerprint"] == fp and self._live(rec) and not rec["consumed"]:
                     return dict(rec)
             rec = {
                 "id": "apr-" + uuid.uuid4().hex[:8], "status": "pending", "rule": rule,

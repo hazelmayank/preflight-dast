@@ -33,6 +33,16 @@ def test_flow_single_use_and_fingerprint_bound(tmp_path):
     assert not q.is_approved(rec["id"], fp)
 
 
+def test_identical_request_after_use_needs_a_new_approval(tmp_path):
+    q = _q(tmp_path)
+    fp = ApprovalQueue.fingerprint("POST", "http://127.0.0.1:8000/x/refunds", None, b"{}")
+    first = q.request("refund", "POST", "u", fp, "agent", "")
+    q.approve(first["id"], "alice")
+    q.consume(first["id"])
+    second = q.request("refund", "POST", "u", fp, "agent", "")
+    assert second["id"] != first["id"] and second["status"] == "pending"
+
+
 def test_agent_like_names_cannot_approve(tmp_path):
     q = _q(tmp_path)
     rec = q.request("refund", "POST", "u", "fp", "agent", "")
