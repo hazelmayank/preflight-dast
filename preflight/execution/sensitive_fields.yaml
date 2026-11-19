@@ -1,0 +1,17 @@
+# What counts as a sensitive field in a response. Matched on key names (case-insensitive regex).
+# Config, not code, so the team can review it.
+always_sensitive:        # presence alone is a problem for callers who are not entitled to it
+  - 'internal_.*'
+  - '.*margin.*'
+  - 'supplier_cost'
+  - '.*secret.*'
+  - 'jwt_.*'
+  - '.*webhook_key'
+  - 'deploy_token'
+  - 'password'
+  - 'api_key'
+  - 'card_number'
+  - 'cvv'
+  - 'dob'
+masked_when_present:     # allowed only if the value is masked (contains '*')
+  - 'passport_no'

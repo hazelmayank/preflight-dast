@@ -107,6 +107,7 @@
     "endpoint": "/api/v1/invoices/{invoice_id}",
     "params": {
      "related_endpoints": [
+      "/api/v1/bookings/{booking_id}",
       "/internal/debug/config"
      ]
     },
