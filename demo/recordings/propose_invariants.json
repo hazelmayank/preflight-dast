@@ -1,0 +1,121 @@
+{
+ "source": "hand-authored fixture (not produced by a live model)",
+ "model": "none",
+ "prompt_version": "invariants-v1",
+ "response": {
+  "invariants": [
+   {
+    "id": "INV-01",
+    "kind": "refund_bound",
+    "statement": "a refund is never greater than the booking's amount paid",
+    "method": "POST",
+    "endpoint": "/api/v1/bookings/{booking_id}/refunds",
+    "params": {},
+    "confidence": 0.9,
+    "evidence": [
+     "refund body carries an amount",
+     "booking responses carry amount_paid"
+    ]
+   },
+   {
+    "id": "INV-02",
+    "kind": "tenant_isolation_read",
+    "statement": "a session reads only bookings of its own tenant",
+    "method": "GET",
+    "endpoint": "/api/v1/bookings/{booking_id}",
+    "params": {},
+    "confidence": 0.9,
+    "evidence": [
+     "booking responses carry tenant_id"
+    ]
+   },
+   {
+    "id": "INV-03",
+    "kind": "role_boundary",
+    "statement": "only an admin role may call admin-only actions",
+    "method": "GET",
+    "endpoint": "/api/v1/admin/tenants/{tenant_id}/users",
+    "params": {
+     "allowed_roles": [
+      "admin"
+     ],
+     "tenant_param": "tenant_id"
+    },
+    "confidence": 0.85,
+    "evidence": [
+     "path contains /admin/"
+    ]
+   },
+   {
+    "id": "INV-04",
+    "kind": "price_integrity",
+    "statement": "the amount charged equals the server-quoted price",
+    "method": "POST",
+    "endpoint": "/api/v1/bookings/{booking_id}/pay",
+    "params": {},
+    "confidence": 0.7,
+    "evidence": [
+     "pay body carries an amount; booking carries total_amount"
+    ]
+   },
+   {
+    "id": "INV-05",
+    "kind": "no_double_refund",
+    "statement": "a paid booking is refunded at most once for its total",
+    "method": "POST",
+    "endpoint": "/api/v1/bookings/{booking_id}/refunds",
+    "params": {},
+    "confidence": 0.8,
+    "evidence": [
+     "refunds can be repeated on the same booking"
+    ]
+   },
+   {
+    "id": "INV-06",
+    "kind": "valid_transitions",
+    "statement": "refund is allowed only from a paid and cancelled state",
+    "method": "POST",
+    "endpoint": "/api/v1/bookings/{booking_id}/refunds",
+    "params": {
+     "related_endpoints": [
+      "/api/v1/bookings/{booking_id}/pay",
+      "/api/v1/bookings/{booking_id}/cancel"
+     ]
+    },
+    "confidence": 0.75,
+    "evidence": [
+     "journeys call pay, then cancel, then refunds"
+    ]
+   },
+   {
+    "id": "INV-07",
+    "kind": "ownership_modify",
+    "statement": "only the owning agency may cancel a booking",
+    "method": "POST",
+    "endpoint": "/api/v1/bookings/{booking_id}/cancel",
+    "params": {},
+    "confidence": 0.8,
+    "evidence": [
+     "cancel acts on a booking id and carries no ownership field"
+    ]
+   },
+   {
+    "id": "INV-08",
+    "kind": "no_sensitive_exposure",
+    "statement": "responses never expose sensitive fields or secrets to unentitled callers",
+    "method": "GET",
+    "endpoint": "/api/v1/invoices/{invoice_id}",
+    "params": {
+     "related_endpoints": [
+      "/internal/debug/config"
+     ]
+    },
+    "confidence": 0.55,
+    "evidence": [
+     "invoice responses name a customer",
+     "a debug route was seen only in traffic logs"
+    ]
+   }
+  ]
+ }
+}

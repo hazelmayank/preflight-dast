@@ -1,0 +1,87 @@
+{
+ "source": "hand-authored fixture (not produced by a live model)",
+ "model": "none",
+ "prompt_version": "plan-v1",
+ "response": {
+  "plans": [
+   {
+    "invariant_id": "INV-01",
+    "check": "refund_bound",
+    "method": "POST",
+    "endpoint": "/api/v1/bookings/{booking_id}/refunds",
+    "params": {},
+    "rationale": "a refund is never greater than the booking's amount paid"
+   },
+   {
+    "invariant_id": "INV-02",
+    "check": "tenant_isolation_read",
+    "method": "GET",
+    "endpoint": "/api/v1/bookings/{booking_id}",
+    "params": {},
+    "rationale": "a session reads only bookings of its own tenant"
+   },
+   {
+    "invariant_id": "INV-03",
+    "check": "role_boundary",
+    "method": "GET",
+    "endpoint": "/api/v1/admin/tenants/{tenant_id}/users",
+    "params": {
+     "allowed_roles": [
+      "admin"
+     ],
+     "tenant_param": "tenant_id"
+    },
+    "rationale": "only an admin role may call admin-only actions"
+   },
+   {
+    "invariant_id": "INV-04",
+    "check": "price_integrity",
+    "method": "POST",
+    "endpoint": "/api/v1/bookings/{booking_id}/pay",
+    "params": {},
+    "rationale": "the amount charged equals the server-quoted price"
+   },
+   {
+    "invariant_id": "INV-05",
+    "check": "no_double_refund",
+    "method": "POST",
+    "endpoint": "/api/v1/bookings/{booking_id}/refunds",
+    "params": {},
+    "rationale": "a paid booking is refunded at most once for its total"
+   },
+   {
+    "invariant_id": "INV-06",
+    "check": "valid_transitions",
+    "method": "POST",
+    "endpoint": "/api/v1/bookings/{booking_id}/refunds",
+    "params": {
+     "related_endpoints": [
+      "/api/v1/bookings/{booking_id}/pay",
+      "/api/v1/bookings/{booking_id}/cancel"
+     ]
+    },
+    "rationale": "refund is allowed only from a paid and cancelled state"
+   },
+   {
+    "invariant_id": "INV-07",
+    "check": "ownership_modify",
+    "method": "POST",
+    "endpoint": "/api/v1/bookings/{booking_id}/cancel",
+    "params": {},
+    "rationale": "only the owning agency may cancel a booking"
+   },
+   {
+    "invariant_id": "INV-08",
+    "check": "no_sensitive_exposure",
+    "method": "GET",
+    "endpoint": "/api/v1/invoices/{invoice_id}",
+    "params": {
+     "related_endpoints": [
+      "/internal/debug/config"
+     ]
+    },
+    "rationale": "responses never expose sensitive fields or secrets to unentitled callers"
+   }
+  ]
+ }
+}
