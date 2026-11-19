@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preflight control room</title>
+<style>
+  :root { --bg:#f6f7f9; --card:#fff; --ink:#1b1f24; --mute:#5b6572; --line:#dde1e6; --accent:#2d5fa8;
+          --ok:#1f7a3a; --warn:#b26a00; --bad:#b3261e; --chip:#eef1f5; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+          --bg:#0f1318; --card:#171c23; --ink:#e7eaee; --mute:#9aa5b1; --line:#2a313a; --accent:#7aa7e8;
+          --ok:#58c27d; --warn:#e0a24a; --bad:#f2837c; --chip:#222a33; } }
+  :root[data-theme="dark"] { --bg:#0f1318; --card:#171c23; --ink:#e7eaee; --mute:#9aa5b1; --line:#2a313a;
+          --accent:#7aa7e8; --ok:#58c27d; --warn:#e0a24a; --bad:#f2837c; --chip:#222a33; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif; }
+  header { padding:14px 16px; border-bottom:1px solid var(--line); background:var(--card);
+           display:flex; flex-wrap:wrap; gap:10px 16px; align-items:center; }
+  h1 { font-size:17px; margin:0; } h2 { font-size:14px; margin:0 0 8px; }
+  main { padding:16px; display:grid; gap:14px; grid-template-columns:repeat(auto-fit,minmax(340px,1fr)); max-width:1400px; margin:auto; }
+  section { background:var(--card); border:1px solid var(--line); border-radius:8px; padding:12px; min-width:0; }
+  .wide { grid-column:1/-1; }
+  .chip { display:inline-block; padding:1px 8px; border-radius:10px; background:var(--chip); font-size:12px; }
+  .ok { color:var(--ok); } .warn { color:var(--warn); } .bad { color:var(--bad); } .mute { color:var(--mute); }
+  .banner { background:var(--chip); border-left:3px solid var(--warn); padding:6px 10px; border-radius:4px; font-size:12px; }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:10px; }
+  .tile { border:1px solid var(--line); border-radius:6px; padding:8px 10px; }
+  .tile b { display:block; font-size:22px; } .tile span { color:var(--mute); font-size:12px; }
+  table { width:100%; border-collapse:collapse; font-size:13px; } th,td { text-align:left; padding:4px 6px; border-bottom:1px solid var(--line); vertical-align:top; word-break:break-word; }
+  .scroll { max-height:320px; overflow:auto; }
+  button { font:inherit; border:1px solid var(--line); background:var(--chip); color:var(--ink); border-radius:6px; padding:4px 10px; cursor:pointer; }
+  button.primary { background:var(--accent); color:#fff; border-color:var(--accent); } button.danger { background:var(--bad); color:#fff; border-color:var(--bad); }
+  input { font:inherit; padding:4px 8px; border:1px solid var(--line); border-radius:6px; background:var(--card); color:var(--ink); }
+  details { border:1px solid var(--line); border-radius:6px; padding:6px 10px; margin-bottom:8px; }
+  pre { white-space:pre-wrap; word-break:break-word; background:var(--chip); padding:6px; border-radius:4px; margin:4px 0; font-size:12px; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Preflight control room</h1>
+  <span id="state" class="chip">IDLE</span>
+  <span id="version" class="mute"></span>
+  <span class="row"><label class="mute" for="who">You are:</label><input id="who" placeholder="your name" size="14"></span>
+  <button id="theme">Theme</button>
+</header>
+<main>
+  <section class="wide"><div id="llm" class="banner"></div></section>
+  <section class="wide"><h2>Scoreboard</h2><div id="tiles" class="tiles"></div></section>
+  <section><h2>Timeline</h2><div id="timeline" class="scroll"></div></section>
+  <section><h2>Safety</h2><div id="safety"></div>
+    <div class="row" style="margin-top:8px"><button id="kill" class="danger">Kill switch</button></div>
+    <h2 style="margin-top:12px">Needs a human</h2><div id="human"></div></section>
+  <section class="wide"><h2>Invariants and checks</h2><div id="checks" class="scroll"></div></section>
+  <section class="wide"><h2>Findings and tickets</h2><div id="tickets"></div></section>
+  <section><h2>Endpoint inventory</h2><div id="inventory" class="scroll"></div></section>
+  <section><h2>Audit log (last entries)</h2><div id="audit" class="scroll"></div></section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+function td(row, v, cls) { const c = el("td", cls, v === null || v === undefined ? "" : String(v)); row.appendChild(c); return c; }
+function table(head, rows) { const t = el("table"); const h = el("tr"); head.forEach(x => h.appendChild(el("th", "", x))); t.appendChild(h); rows.forEach(r => t.appendChild(r)); return t; }
+const store = (k, v) => { try { if (v === undefined) return localStorage.getItem(k); localStorage.setItem(k, v); } catch (e) { return null; } };
+$("who").value = store("who") || ""; $("who").addEventListener("input", e => store("who", e.target.value));
+$("theme").onclick = () => { const r = document.documentElement; const d = r.dataset.theme === "dark" || (!r.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches); r.dataset.theme = d ? "light" : "dark"; };
+const sevCls = { critical: "bad", high: "bad", medium: "warn", low: "mute" };
+const statusCls = { finding: "bad", clean: "ok", inconclusive: "warn", Open: "bad", Reopened: "bad", Resolved: "ok" };
+
+async function post(url, body) {
+  const who = $("who").value.trim(); if (!who) { alert("Enter your name first (top right)."); return; }
+  const r = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ by: who, ...(body || {}) }) });
+  if (!r.ok) alert((await r.json()).detail || "request failed"); refresh();
+}
+$("kill").onclick = () => { if (confirm("Stop everything now?")) post("/api/kill"); };
+
+function render(d) {
+  const run = d.run || {}, score = d.score || {}, safety = run.safety || {}, sb = run.scoreboard || {};
+  $("state").textContent = run.state || "IDLE"; $("version").textContent = run.version ? "deployed: " + run.version : "";
+  const llm = run.llm || {};
+  $("llm").textContent = llm.client ? "Invariants proposed by: " + llm.client + " | source: " + (llm.source || "n/a") + " | model: " + (llm.model || "n/a") + " | prompt " + (llm.prompt_version || "n/a") : "LLM step not run yet";
+
+  const tiles = [
+    ["found / seeded", score.total ? score.found + " / " + score.total : (sb.findings ?? 0) + " found"],
+    ["false positives (clean build)", sb.false_positives_clean_build ?? "pending"],
+    ["deploy to first proof", sb.deploy_to_first_proof_s != null ? sb.deploy_to_first_proof_s + " s" : "n/a"],
+    ["out-of-scope requests sent", safety.out_of_scope_sent ?? 0],
+    ["requests sent", safety.requests_sent ?? 0], ["held for approval", safety.held_for_approval ?? 0],
+    ["tickets resolved", (sb.resolved ?? 0) + " / " + (sb.findings ?? 0)],
+  ];
+  const tl = $("tiles"); tl.replaceChildren(...tiles.map(([k, v]) => { const t = el("div", "tile"); t.appendChild(el("b", "", v)); t.appendChild(el("span", "", k)); return t; }));
+
+  const ev = (run.events || []).slice(-60).reverse();
+  $("timeline").replaceChildren(table(["time", "state", "event"], ev.map(e => { const r = el("tr"); td(r, new Date(e.ts * 1000).toLocaleTimeString()); td(r, e.state); td(r, e.msg); return r; })));
+
+  const s = $("safety"); s.replaceChildren(
+    el("div", safety.audit_chain_ok === false ? "bad" : "ok", "audit chain: " + (safety.audit_chain_ok === false ? "BROKEN" : "valid") + " (" + (safety.audit_entries ?? 0) + " entries)"),
+    el("div", safety.kill_switch ? "bad" : "mute", "kill switch: " + (safety.kill_switch ? "ENGAGED" : "clear")),
+    el("div", "mute", "refused: " + (safety.refused ?? 0) + " | approvals used: " + (safety.approvals_used ?? 0)));
+
+  const h = $("human"); const items = [];
+  if ((d.awaiting_confirmation || []).length) {
+    const box = el("div"); box.appendChild(el("div", "", "Confirm the proposed invariants: " + d.awaiting_confirmation.join(", ")));
+    const b = el("button", "primary", "Confirm set (not low-confidence)"); b.onclick = () => post("/api/invariants/confirm"); box.appendChild(b);
+    (d.low_confidence || []).forEach(id => { const lb = el("button", "", "Confirm " + id + " (low confidence)"); lb.onclick = () => post("/api/invariants/" + id + "/confirm"); box.appendChild(lb); });
+    items.push(box);
+  }
+  (d.pending_approvals || []).forEach(a => {
+    const box = el("div", "row"); box.appendChild(el("span", "chip", a.rule)); box.appendChild(el("span", "", a.method + " " + a.url.replace(/^https?:\/\/[^/]+/, "")));
+    const ap = el("button", "primary", "Approve"); ap.onclick = () => post("/api/approvals/" + a.id + "/approve");
+    const dn = el("button", "", "Deny"); dn.onclick = () => post("/api/approvals/" + a.id + "/deny"); box.append(ap, dn); items.push(box);
+  });
+  h.replaceChildren(...(items.length ? items : [el("span", "mute", "nothing waiting")]));
+
+  const inv = {}; (run.invariants || []).forEach(i => inv[i.id] = i);
+  const ids = Object.keys(Object.assign({}, inv, run.checks || {})).sort();
+  $("checks").replaceChildren(table(["id", "invariant", "endpoint", "confidence", "check result", "after fix", "s"], ids.map(id => {
+    const i = inv[id] || {}, c = (run.checks || {})[id] || {}, r = el("tr");
+    td(r, id); td(r, i.statement || c.check); td(r, (i.method || "") + " " + (i.endpoint || c.endpoint || ""));
+    td(r, i.confidence !== undefined ? i.confidence + (i.low_confidence ? " (human)" : "") : "");
+    td(r, c.status ? c.status + " - " + c.reason : (i.status || ""), statusCls[c.status] || "");
+    td(r, c.after_fix || "", statusCls[c.after_fix] || ""); td(r, c.seconds ?? ""); return r; })));
+
+  const tk = $("tickets");
+  if (!(d.tickets || []).length) { tk.replaceChildren(el("span", "mute", "no findings yet")); }
+  else tk.replaceChildren(...d.tickets.map(t => {
+    const dt = el("details"); const sm = el("summary");
+    sm.append(el("b", "", t.id + " "), el("span", "chip " + (sevCls[t.severity] || ""), t.severity), document.createTextNode(" "), el("span", "chip " + (statusCls[t.status] || ""), t.status), document.createTextNode(" " + t.title));
+    dt.appendChild(sm);
+    dt.appendChild(el("div", "", "Owner: " + t.owner.team + " (" + t.owner.contact + ")"));
+    dt.appendChild(el("div", "", "Impact: " + t.impact));
+    dt.appendChild(el("div", "", "Suggested fix: " + t.suggested_fix));
+    dt.appendChild(el("div", "mute", "Reproduced " + t.reproduced + "x; deploy to proof " + t.seconds_deploy_to_proof + " s"));
+    const ex = (e) => el("pre", "", e.label + " as " + (e.actor || "anonymous") + "\n" + e.method + " " + e.path + " -> HTTP " + e.status + "\nrequest: " + JSON.stringify(e.request_body) + "\nresponse: " + e.response);
+    dt.appendChild(el("div", "mute", "Normal flow (control)")); t.evidence.control.forEach(e => dt.appendChild(ex(e)));
+    dt.appendChild(el("div", "mute", "Violation")); t.evidence.proof.forEach(e => dt.appendChild(ex(e)));
+    dt.appendChild(el("div", "mute", "Reproduce")); dt.appendChild(el("pre", "", t.curl));
+    dt.appendChild(el("div", "mute", "History")); dt.appendChild(el("pre", "", t.history.map(x => new Date(x.ts * 1000).toLocaleTimeString() + "  " + x.event + ": " + x.detail).join("\n")));
+    return dt; }));
+
+  $("inventory").replaceChildren(table(["endpoint", "label", "30d", "90d"], (run.inventory || []).map(i => { const r = el("tr"); td(r, i.endpoint); td(r, i.label, i.label === "active" ? "ok" : "warn"); td(r, i.hits_30d); td(r, i.hits_90d); return r; })));
+  $("audit").replaceChildren(table(["#", "event", "detail"], (d.audit_tail || []).slice().reverse().map(a => { const r = el("tr"); td(r, a.seq); td(r, a.event); td(r, a.summary); return r; })));
+}
+async function refresh() { try { render(await (await fetch("/api/state")).json()); } catch (e) { $("state").textContent = "UI cannot reach the server"; } }
+refresh(); setInterval(refresh, 1000);
+</script>
+</body>
+</html>
