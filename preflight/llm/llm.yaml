@@ -1,0 +1,8 @@
+# Model routing. The small model is the default path; the large model is used only when a
+# proposal's confidence is below `escalate_below_confidence` (re-proposed once, then a human decides).
+provider: offline            # offline | anthropic
+models:
+  small: claude-haiku-5-5
+  large: claude-sonnet-5-5
+escalate_below_confidence: 0.6
+max_tokens: 4000
