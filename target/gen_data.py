@@ -73,14 +73,14 @@ def access_logs(days: int, rnd: random.Random) -> list[dict]:
             ts = day.replace(hour=rnd.randint(4, 17), minute=rnd.randint(0, 59),
                              second=rnd.randint(0, 59))
             rows.append(_line(ts, method, _fill(tmpl, rnd), rnd.choice(roles), rnd, "partner-ip"))
-        if 35 <= d < 90 and rnd.random() < 0.5:  # zombie: only in older months
+        if 35 <= d < 90 and d % 4 == 0:  # zombie: only in older months
             ts = day.replace(hour=rnd.randint(4, 17), minute=rnd.randint(0, 59), second=0)
             rows.append(_line(ts, "GET", f"/api/v0/bookings/BK-{rnd.choice([1001, 1002])}",
                               "agent", rnd, "legacy-integration"))
-        if rnd.random() < 0.05:  # shadow: internal tooling, never in the front-end
+        if d % 6 == 0:  # shadow: internal tooling, never in the front-end
             ts = day.replace(hour=rnd.randint(0, 3), minute=rnd.randint(0, 59), second=0)
             rows.append(_line(ts, "GET", "/internal/debug/config", "admin", rnd, "internal-tool"))
-        if rnd.random() < 0.15:
+        if d % 3 == 0:
             ts = day.replace(hour=rnd.randint(0, 23), minute=rnd.randint(0, 59), second=0)
             rows.append(_line(ts, "POST", "/webhooks/supplier", "agent", rnd, "supplier-ip"))
     rows.sort(key=lambda r: r["ts"])
@@ -141,12 +141,20 @@ def journeys() -> dict:
             rec.call("GET", f"/api/v1/customers/{cust}", agent)
             rec.call("POST", f"/api/v1/bookings/{booking['id']}/ticket", agent)
 
+            # second booking: paid, then cancelled and refunded by the admin (cancel before refund)
+            hold2 = rec.call("POST", "/api/v1/holds", agent,
+                             json={"offer_id": offers[1]["offer_id"], "nights": 1, "pax": 1}).json()
+            b2 = rec.call("POST", "/api/v1/bookings", agent,
+                          json={"hold_id": hold2["hold_id"], "customer_id": cust}).json()
+            rec.call("POST", f"/api/v1/bookings/{b2['id']}/pay", agent,
+                     json={"amount": b2["total_amount"]})
+
             admin = login(f"admin@{tenant}.test")
             rec.call("GET", "/api/v1/users", admin)
             rec.call("GET", "/api/v1/bookings", admin)
-            rec.call("POST", f"/api/v1/bookings/{booking['id']}/cancel", admin)
-            rec.call("POST", f"/api/v1/bookings/{booking['id']}/refunds", admin,
-                     json={"amount": booking["total_amount"], "reason": "customer request"})
+            rec.call("POST", f"/api/v1/bookings/{b2['id']}/cancel", admin)
+            rec.call("POST", f"/api/v1/bookings/{b2['id']}/refunds", admin,
+                     json={"amount": b2["total_amount"], "reason": "customer request"})
             rec.call("POST", "/api/v1/auth/logout", admin)
 
             sub = login(f"sub@{tenant}.test")
