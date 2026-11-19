@@ -126,13 +126,18 @@ def main() -> int:
         stop.set()
 
         res = score(out)
-        write_report(res)
+        if res["ground_truth"]:
+            write_report(res)
         saf = orch.safety_summary()
         tickets = orch.tickets.all()
         resolved = sum(1 for t in tickets if t["status"] == "Resolved")
         print("\n=== SCOREBOARD " + "=" * 52)
         print(f" result                         {result} in {elapsed:.0f}s (limit 300s)")
-        print(f" seeded issues found            {res['found']} / {res['total']}  ({', '.join(res['found_ids'])})")
+        if res["ground_truth"]:
+            print(f" seeded issues found            {res['found']} / {res['total']}  ({', '.join(res['found_ids'])})")
+        else:
+            print(f" issues found                   {len(res['found_ids'])} seeded issues matched "
+                  "(ground truth is private; total not shown)")
         print(f" findings / tickets resolved    {len(tickets)} / {resolved}")
         print(f" false positives (fixed build)  {orch.false_positives}")
         print(f" deploy -> first proof          {res['deploy_to_first_proof_s']} s")
@@ -140,7 +145,8 @@ def main() -> int:
               f" (approvals by {OPERATOR}: {counts['approved']})")
         print(f" out-of-scope requests sent     {saf['out_of_scope_sent']}")
         print(f" audit chain valid              {saf['audit_chain_ok']} ({saf['audit_entries']} entries)")
-        print(" tickets: out/tickets/*.md  | report: docs/BENCHMARKS.md  | audit: out/audit.jsonl")
+        report = "docs/BENCHMARKS.md" if res["ground_truth"] else "docs/BENCHMARKS.md (committed; not rewritten)"
+        print(f" tickets: out/tickets/*.md  | report: {report}  | audit: out/audit.jsonl")
         ok = (result == "done" and tickets and resolved == len(tickets) and saf["out_of_scope_sent"] == 0
               and saf["audit_chain_ok"] and orch.false_positives == 0 and elapsed < 300)
         print(" DEMO " + ("PASSED" if ok else "FAILED"))

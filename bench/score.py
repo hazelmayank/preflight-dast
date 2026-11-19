@@ -34,7 +34,8 @@ def _load(path: Path, default: Any) -> Any:
 
 
 def score(out_dir: Path = ROOT / "out", seeds_path: Path = SEEDS) -> dict[str, Any]:
-    seeds = yaml.safe_load(seeds_path.read_text(encoding="utf-8"))["seeds"]
+    have_truth = seeds_path.exists()  # seeds/ is private and git-ignored: absent in a fresh clone
+    seeds = yaml.safe_load(seeds_path.read_text(encoding="utf-8"))["seeds"] if have_truth else []
     tickets = _load(out_dir / "tickets.json", [])
     state = _load(out_dir / "state.json", {})
     found_ids = sorted({s for t in tickets for s in SEED_MAP.get(t["invariant_id"], [])})
@@ -53,7 +54,8 @@ def score(out_dir: Path = ROOT / "out", seeds_path: Path = SEEDS) -> dict[str, A
         c[0] += 1 if s["id"] in found_ids else 0
     sb = state.get("scoreboard", {})
     result = {
-        "total": len(seeds), "found": len(found_ids), "found_ids": found_ids, "misses": misses,
+        "ground_truth": have_truth, "total": len(seeds) if have_truth else None,
+        "found": len(found_ids), "found_ids": found_ids, "misses": misses,
         "by_class": {k: f"{v[0]}/{v[1]}" for k, v in by_class.items()},
         "findings": len(tickets), "unmatched_findings": unmatched,
         "precision": (1 - len(unmatched) / len(tickets)) if tickets else None,
@@ -81,6 +83,8 @@ def write_report(r: dict[str, Any], path: Path = ROOT / "docs" / "BENCHMARKS.md"
     rows = "\n".join(f"| {k} | {v['vulnerable_build']} | {v['after_fix']} |" for k, v in sorted(r["checks"].items()))
     cls = "\n".join(f"| {k} | {v} |" for k, v in sorted(r["by_class"].items()))
     miss = "\n".join(f"- **{m['id']}** ({m['class']}): {m['title']}: {m['reason']}" for m in r["misses"])
+    if not r["ground_truth"]:
+        raise ValueError("cannot write the benchmark report without the ground-truth issue list")
     prec = "n/a" if r["precision"] is None else f"{r['precision']:.0%}"
     text = f"""# Benchmarks
 
@@ -142,5 +146,8 @@ Injection, session/auth and server-side classes are deliberately out of MVP scop
 
 if __name__ == "__main__":
     res = score()
+    if not res["ground_truth"]:
+        print("seeds/seeds.yaml not found: the ground truth is private, so no report was written.")
+        raise SystemExit(0)
     write_report(res)
     print(f"recall {res['found']}/{res['total']}; findings {res['findings']}; report written", file=sys.stdout)

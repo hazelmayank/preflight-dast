@@ -62,3 +62,12 @@ def test_scorer_matches_tickets_to_seeds(tmp_path):
     write_report(r, report)
     text = report.read_text()
     assert "Not blind" in text and "S12" in text
+
+
+def test_scorer_degrades_gracefully_without_the_private_ground_truth(tmp_path):
+    (tmp_path / "tickets.json").write_text(json.dumps([{"id": "FIND-INV-01", "invariant_id": "INV-01"}]))
+    r = score(tmp_path, tmp_path / "missing" / "seeds.yaml")
+    assert r["ground_truth"] is False and r["total"] is None and r["found_ids"] == ["S08"]
+    with pytest.raises(ValueError):
+        write_report(r, tmp_path / "B.md")
+    assert not (tmp_path / "B.md").exists()
